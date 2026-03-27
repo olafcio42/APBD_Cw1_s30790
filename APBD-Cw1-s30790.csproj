@@ -54,9 +54,9 @@
         <Compile Include="Models\Wypozyczenie.cs" />
         <Compile Include="Program.cs"/>
         <Compile Include="Properties\AssemblyInfo.cs"/>
-    </ItemGroup>
-    <ItemGroup>
-      <Folder Include="Services\" />
+        <Compile Include="Services\IKalkulatorKar.cs" />
+        <Compile Include="Services\StalyKalkulatorKar.cs" />
+        <Compile Include="Services\WypozyczalniaService.cs" />
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
     <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
