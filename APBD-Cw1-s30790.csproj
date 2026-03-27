@@ -45,9 +45,11 @@
         <Compile Include="Exceptions\SprzetNiedostepnyException.cs" />
         <Compile Include="Models\Kamera.cs" />
         <Compile Include="Models\Laptop.cs" />
+        <Compile Include="Models\Pracownik.cs" />
         <Compile Include="Models\Projektor.cs" />
         <Compile Include="Models\Sprzet.cs" />
         <Compile Include="Models\StatusSprzetu.cs" />
+        <Compile Include="Models\Student.cs" />
         <Compile Include="Models\Uzytkownik.cs" />
         <Compile Include="Models\Wypozyczenie.cs" />
         <Compile Include="Program.cs"/>
