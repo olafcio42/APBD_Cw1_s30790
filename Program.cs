@@ -30,7 +30,38 @@ namespace APBD_Cw1_s30790
             wypozyczalnia.DodajUzytkownika(student);
             wypozyczalnia.DodajUzytkownika(pracownik);
             
-            
+            Console.WriteLine("--- Oznaczanie sprzętu jako niedostępnego ---");
+            wypozyczalnia.OznaczJakoNiedostepny(uszkodzonyLaptop.Id);
+            Console.WriteLine($"Status {uszkodzonyLaptop.Nazwa}: {uszkodzonyLaptop.Status}");
+
+            Console.WriteLine("\n--- Poprawne wypożyczenie ---");
+            var wyp1 = wypozyczalnia.Wypozycz(pracownik.Id, laptop1.Id, 7, dzisiaj);
+            Console.WriteLine($"Pracownik wypożyczył: {wyp1.Sprzet.Nazwa} do {wyp1.PlanowanaDataZwrotu.ToShortDateString()}");
+
+            Console.WriteLine("\n--- Próba wypożyczenia niedostępnego sprzętu ---");
+            try
+            {
+                wypozyczalnia.Wypozycz(student.Id, uszkodzonyLaptop.Id, 3, dzisiaj);
+            }
+            catch (RegulaBiznesowaException ex)
+            {
+                Console.WriteLine($"Oczekiwany błąd: {ex.Message}");
+            }
+
+            Console.WriteLine("\n--- Próba przekroczenia limitu przez studenta ---");
+            try
+            {
+                wypozyczalnia.Wypozycz(student.Id, kamera1.Id, 3, dzisiaj);
+                var kamera2 = new Kamera { Nazwa = "GoPro", FormatNagrywania = "1080p" };
+                wypozyczalnia.DodajSprzet(kamera2);
+                wypozyczalnia.Wypozycz(student.Id, kamera2.Id, 3, dzisiaj);
+                
+                wypozyczalnia.Wypozycz(student.Id, projektor1.Id, 2, dzisiaj);
+            }
+            catch (RegulaBiznesowaException ex)
+            {
+                Console.WriteLine($"Oczekiwany błąd: {ex.Message}");
+            }
             
         }
     }
