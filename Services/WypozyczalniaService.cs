@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using APBD_Cw1_s30790.Exceptions;
 using APBD_Cw1_s30790.Models;
 
@@ -8,9 +11,9 @@ namespace APBD_Cw1_s30790.Services
 {
     public class WypozyczalniaService
     {
-        private readonly List<Uzytkownik> _uzytkownicy = new List<Uzytkownik>();
-        private readonly List<Sprzet> _sprzet = new List<Sprzet>();
-        private readonly List<Wypozyczenie> _wypozyczenia = new List<Wypozyczenie>();
+        private List<Uzytkownik> _uzytkownicy = new List<Uzytkownik>();
+        private List<Sprzet> _sprzet = new List<Sprzet>();
+        private List<Wypozyczenie> _wypozyczenia = new List<Wypozyczenie>();
         private readonly IKalkulatorKar _kalkulatorKar;
 
         public WypozyczalniaService(IKalkulatorKar kalkulatorKar)
@@ -22,9 +25,13 @@ namespace APBD_Cw1_s30790.Services
         
         public void DodajSprzet(Sprzet sprzet) => _sprzet.Add(sprzet);
 
+        public IEnumerable<Uzytkownik> PobierzUzytkownikow() => _uzytkownicy;
+
         public IEnumerable<Sprzet> PobierzCalySprzet() => _sprzet;
 
         public IEnumerable<Sprzet> PobierzDostepnySprzet() => _sprzet.Where(s => s.Status == StatusSprzetu.Dostepny);
+        
+        public IEnumerable<Wypozyczenie> PobierzWypozyczenia() => _wypozyczenia;
 
         public Wypozyczenie Wypozycz(Guid idUzytkownika, Guid idSprzetu, int dni, DateTime aktualnaData)
         {
@@ -69,27 +76,47 @@ namespace APBD_Cw1_s30790.Services
             var sprzet = _sprzet.FirstOrDefault(s => s.Id == idSprzetu) ?? throw new ArgumentException("Nie znaleziono sprzętu");
             
             if (sprzet.Status == StatusSprzetu.Wypozyczony) 
-                throw new RegulaBiznesowaException("Nie można zmienić statusu sprzętu, który jest obecnie wypożyczony.");
+                throw new RegulaBiznesowaException("Nie można zmienić statusu sprzętu, który jest wypożyczony.");
                 
             sprzet.Status = StatusSprzetu.Niedostepny;
         }
 
-        public IEnumerable<Wypozyczenie> PobierzAktywneWypozyczenia(Guid idUzytkownika) =>
-            _wypozyczenia.Where(w => w.Uzytkownik.Id == idUzytkownika && w.CzyAktywne);
-
-        public IEnumerable<Wypozyczenie> PobierzPrzeterminowaneWypozyczenia(DateTime aktualnaData) =>
-            _wypozyczenia.Where(w => w.CzyPrzeterminowane(aktualnaData));
-
-        public string GenerujRaport(DateTime aktualnaData)
+        public string GenerujRaport(DateTime aktualnaData, string filtr = "Wszystko")
         {
-            var calkowitaIlosc = _sprzet.Count;
-            var dostepne = _sprzet.Count(s => s.Status == StatusSprzetu.Dostepny);
-            var niedostepne = _sprzet.Count(s => s.Status == StatusSprzetu.Niedostepny);
-            var aktywneWyp = _wypozyczenia.Count(w => w.CzyAktywne);
-            var przeterminowaneWyp = _wypozyczenia.Count(w => w.CzyPrzeterminowane(aktualnaData));
-            var sumaKar = _wypozyczenia.Sum(w => w.Kara);
+            IEnumerable<Sprzet> filtrowanySprzet = _sprzet;
+            IEnumerable<Wypozyczenie> filtrowaneWypozyczenia = _wypozyczenia;
 
-            return $"Raport wypożyczalni:\nSprzęt łącznie: {calkowitaIlosc}\nDostępny sprzęt: {dostepne}\nSprzęt wycofany/w serwisie: {niedostepne}\nAktywne wypożyczenia: {aktywneWyp}\nPrzeterminowane: {przeterminowaneWyp}\nZainkasowane kary: {sumaKar} PLN";
+            if (filtr == "Dostepne") filtrowanySprzet = _sprzet.Where(s => s.Status == StatusSprzetu.Dostepny);
+            if (filtr == "Przeterminowane") filtrowaneWypozyczenia = _wypozyczenia.Where(w => w.CzyPrzeterminowane(aktualnaData));
+
+            var sprzetIlosc = filtrowanySprzet.Count();
+            var aktywneWyp = filtrowaneWypozyczenia.Count(w => w.CzyAktywne);
+            var sumaKar = filtrowaneWypozyczenia.Sum(w => w.Kara);
+
+            return $"Raport ({filtr}):\nSprzęt: {sprzetIlosc}\nAktywne/Przeterminowane wypożyczenia: {aktywneWyp}\nSuma kar: {sumaKar} PLN";
+        }
+
+        public void ZapiszDoJson(string sciezka)
+        {
+            var dto = new BazaDanychDto { Uzytkownicy = _uzytkownicy, Sprzet = _sprzet, Wypozyczenia = _wypozyczenia };
+            var options = new JsonSerializerOptions { WriteIndented = true, ReferenceHandler = ReferenceHandler.Preserve };
+            var json = JsonSerializer.Serialize(dto, options);
+            File.WriteAllText(sciezka, json);
+        }
+
+        public void WczytajZJson(string sciezka)
+        {
+            if (!File.Exists(sciezka)) throw new FileNotFoundException("Brak pliku do wczytania.");
+            var json = File.ReadAllText(sciezka);
+            var options = new JsonSerializerOptions { ReferenceHandler = ReferenceHandler.Preserve };
+            var dto = JsonSerializer.Deserialize<BazaDanychDto>(json, options);
+            
+            if (dto != null)
+            {
+                _uzytkownicy = dto.Uzytkownicy ?? new List<Uzytkownik>();
+                _sprzet = dto.Sprzet ?? new List<Sprzet>();
+                _wypozyczenia = dto.Wypozyczenia ?? new List<Wypozyczenie>();
+            }
         }
     }
 }

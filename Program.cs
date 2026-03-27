@@ -10,73 +10,94 @@ namespace APBD_Cw1_s30790
     {
         public static void Main(string[] args)
         {
-            var dzisiaj = DateTime.Now;
             var kalkulator = new StalyKalkulatorKar(10.0m);
             var wypozyczalnia = new WypozyczalniaService(kalkulator);
+            var plikDanych = "baza.json";
 
-            var laptop1 = new Laptop { Nazwa = "Dell XPS", PamiecRamGB = 16, Procesor = "i7" };
-            var kamera1 = new Kamera { Nazwa = "Sony Alpha", FormatNagrywania = "4K", WymiennyObiektyw = true };
-            var projektor1 = new Projektor { Nazwa = "Epson", JasnoscANSI = 3000, Rozdzielczosc = "1080p" };
-            var uszkodzonyLaptop = new Laptop { Nazwa = "Lenovo ThinkPad", PamiecRamGB = 8, Procesor = "i5" };
-            
-            
-            wypozyczalnia.DodajSprzet(laptop1);
-            wypozyczalnia.DodajSprzet(kamera1);
-            wypozyczalnia.DodajSprzet(projektor1);
-            wypozyczalnia.DodajSprzet(uszkodzonyLaptop);
-
-            var student = new Student { Imie = "Jan", Nazwisko = "Kowalski" };
-            var pracownik = new Pracownik { Imie = "Anna", Nazwisko = "Nowak" };
-
-            wypozyczalnia.DodajUzytkownika(student);
-            wypozyczalnia.DodajUzytkownika(pracownik);
-            
-            Console.WriteLine("--- Oznaczanie sprzętu jako niedostępnego ---");
-            wypozyczalnia.OznaczJakoNiedostepny(uszkodzonyLaptop.Id);
-            Console.WriteLine($"Status {uszkodzonyLaptop.Nazwa}: {uszkodzonyLaptop.Status}");
-
-            Console.WriteLine("\n--- Poprawne wypożyczenie ---");
-            var wyp1 = wypozyczalnia.Wypozycz(pracownik.Id, laptop1.Id, 7, dzisiaj);
-            Console.WriteLine($"Pracownik wypożyczył: {wyp1.Sprzet.Nazwa} do {wyp1.PlanowanaDataZwrotu.ToShortDateString()}");
-
-            Console.WriteLine("\n--- Próba wypożyczenia niedostępnego sprzętu ---");
-            try
+            while (true)
             {
-                wypozyczalnia.Wypozycz(student.Id, uszkodzonyLaptop.Id, 3, dzisiaj);
-            }
-            catch (RegulaBiznesowaException ex)
-            {
-                Console.WriteLine($"Oczekiwany błąd: {ex.Message}");
-            }
+                Console.WriteLine("\n=== MENU ===");
+                Console.WriteLine("1. Wyświetl sprzęt");
+                Console.WriteLine("2. Wyświetl dostępny sprzęt");
+                Console.WriteLine("3. Wyświetl użytkowników");
+                Console.WriteLine("4. Wypożycz sprzęt");
+                Console.WriteLine("5. Zwróć sprzęt");
+                Console.WriteLine("6. Generuj raport");
+                Console.WriteLine("7. Zapisz dane do JSON");
+                Console.WriteLine("8. Wczytaj dane z JSON");
+                Console.WriteLine("9. Załaduj testowe dane");
+                Console.WriteLine("0. Wyjście");
+                Console.Write("Wybierz opcję: ");
 
-            Console.WriteLine("\n--- Próba przekroczenia limitu przez studenta ---");
-            try
-            {
-                wypozyczalnia.Wypozycz(student.Id, kamera1.Id, 3, dzisiaj);
-                var kamera2 = new Kamera { Nazwa = "GoPro", FormatNagrywania = "1080p" };
-                wypozyczalnia.DodajSprzet(kamera2);
-                wypozyczalnia.Wypozycz(student.Id, kamera2.Id, 3, dzisiaj);
-                
-                wypozyczalnia.Wypozycz(student.Id, projektor1.Id, 2, dzisiaj);
-            }
-            catch (RegulaBiznesowaException ex)
-            {
-                Console.WriteLine($"Oczekiwany błąd: {ex.Message}");
-            }
-            
-            Console.WriteLine("\n--- Zwrot sprzętu w terminie ---");
-            wypozyczalnia.Zwroc(wyp1.Id, dzisiaj.AddDays(5));
-            Console.WriteLine($"Zwrócono. Naliczone kary: {wyp1.Kara} PLN");
+                var opcja = Console.ReadLine();
 
-            Console.WriteLine("\n--- Zwrot opóźniony skutkujący naliczeniem kary ---");
-            var wypStudent = wypozyczalnia.PobierzAktywneWypozyczenia(student.Id).First();
-            wypozyczalnia.Zwroc(wypStudent.Id, dzisiaj.AddDays(5)); 
-            Console.WriteLine($"Zwrócono po terminie. Naliczone kary (2 dni): {wypStudent.Kara} PLN");
-
-            Console.WriteLine("\n--- Raport końcowy ---");
-            Console.WriteLine(wypozyczalnia.GenerujRaport(dzisiaj.AddDays(5)));
-            
-            Console.ReadLine();
+                try
+                {
+                    switch (opcja)
+                    {
+                        case "1":
+                            foreach (var s in wypozyczalnia.PobierzCalySprzet())
+                                Console.WriteLine($"[{s.Id}] {s.PobierzInformacje()} | Status: {s.Status}");
+                            break;
+                        case "2":
+                            foreach (var s in wypozyczalnia.PobierzDostepnySprzet())
+                                Console.WriteLine($"[{s.Id}] {s.PobierzInformacje()} | Status: {s.Status}");
+                            break;
+                        case "3":
+                            foreach (var u in wypozyczalnia.PobierzUzytkownikow())
+                                Console.WriteLine($"[{u.Id}] {u.Imie} {u.Nazwisko} (Limit: {u.LimitWypozyczen})");
+                            break;
+                        case "4":
+                            Console.Write("ID użytkownika: ");
+                            var idU = Guid.Parse(Console.ReadLine() ?? string.Empty);
+                            Console.Write("ID sprzętu: ");
+                            var idS = Guid.Parse(Console.ReadLine() ?? string.Empty);
+                            Console.Write("Dni: ");
+                            var dni = int.Parse(Console.ReadLine() ?? "0");
+                            wypozyczalnia.Wypozycz(idU, idS, dni, DateTime.Now);
+                            Console.WriteLine("Wypożyczono.");
+                            break;
+                        case "5":
+                            Console.WriteLine("Aktywne wypożyczenia:");
+                            foreach(var w in wypozyczalnia.PobierzWypozyczenia().Where(x => x.CzyAktywne))
+                                Console.WriteLine($"ID: {w.Id} | Kto: {w.Uzytkownik.Nazwisko} | Co: {w.Sprzet.Nazwa}");
+                            Console.Write("ID wypożyczenia: ");
+                            var idW = Guid.Parse(Console.ReadLine() ?? string.Empty);
+                            wypozyczalnia.Zwroc(idW, DateTime.Now);
+                            Console.WriteLine("Zwrócono.");
+                            break;
+                        case "6":
+                            Console.WriteLine("Filtr: 1-Wszystko, 2-Tylko dostępne, 3-Przeterminowane");
+                            var filtrOpcja = Console.ReadLine();
+                            var filtr = filtrOpcja == "2" ? "Dostepne" : (filtrOpcja == "3" ? "Przeterminowane" : "Wszystko");
+                            Console.WriteLine(wypozyczalnia.GenerujRaport(DateTime.Now, filtr));
+                            break;
+                        case "7":
+                            wypozyczalnia.ZapiszDoJson(plikDanych);
+                            Console.WriteLine("Zapisano.");
+                            break;
+                        case "8":
+                            wypozyczalnia.WczytajZJson(plikDanych);
+                            Console.WriteLine("Wczytano.");
+                            break;
+                        case "9":
+                            wypozyczalnia.DodajSprzet(new Laptop { Nazwa = "Dell XPS", PamiecRamGB = 16, Procesor = "i7" });
+                            wypozyczalnia.DodajSprzet(new Kamera { Nazwa = "GoPro", FormatNagrywania = "4K" });
+                            wypozyczalnia.DodajUzytkownika(new Student { Imie = "Adam", Nazwisko = "Nowak" });
+                            Console.WriteLine("Dodano.");
+                            break;
+                        case "0":
+                            return;
+                        default:
+                            Console.WriteLine("Nieznana opcja.");
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"BŁĄD: {ex.Message}");
+                }
+            }
         }
     }
 }
