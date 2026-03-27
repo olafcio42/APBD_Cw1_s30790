@@ -63,6 +63,19 @@ namespace APBD_Cw1_s30790
                 Console.WriteLine($"Oczekiwany błąd: {ex.Message}");
             }
             
+            Console.WriteLine("\n--- Zwrot sprzętu w terminie ---");
+            wypozyczalnia.Zwroc(wyp1.Id, dzisiaj.AddDays(5));
+            Console.WriteLine($"Zwrócono. Naliczone kary: {wyp1.Kara} PLN");
+
+            Console.WriteLine("\n--- Zwrot opóźniony skutkujący naliczeniem kary ---");
+            var wypStudent = wypozyczalnia.PobierzAktywneWypozyczenia(student.Id).First();
+            wypozyczalnia.Zwroc(wypStudent.Id, dzisiaj.AddDays(5)); 
+            Console.WriteLine($"Zwrócono po terminie. Naliczone kary (2 dni): {wypStudent.Kara} PLN");
+
+            Console.WriteLine("\n--- Raport końcowy ---");
+            Console.WriteLine(wypozyczalnia.GenerujRaport(dzisiaj.AddDays(5)));
+            
+            Console.ReadLine();
         }
     }
 }
